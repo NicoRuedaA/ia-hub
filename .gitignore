@@ -17,6 +17,22 @@ release
 # Local tooling
 .codegraph
 .atl
+.claude/settings.local.json
+
+# Secrets & environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.keystore
+*.jks
+secrets.json
+credentials.json
 
 # Editor directories and files
 .vscode/*
