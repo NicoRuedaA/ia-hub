@@ -10,6 +10,8 @@ and risk states.
 
 No API keys. No scraping servers. No data leaves your machine.
 
+![IA Hub usage overview — every provider's limits, reset times, and risk state on one dashboard](./img.png)
+
 Built with Electron, React 19, TypeScript (`strict`), Tailwind CSS 4, Zustand,
 Recharts, and date-fns.
 
