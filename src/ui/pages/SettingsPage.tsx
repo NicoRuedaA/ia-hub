@@ -1,11 +1,18 @@
-import { useState, useRef } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { useAppStore } from '../../state/store'
+import { languageName, useTranslation } from '../../i18n'
+import { usePreferencesStore } from '../../state/preferencesStore'
+import type { UiLanguage } from '../../domain/types'
 import { defaultState } from '../../infrastructure/schema'
 import { validateState } from '../../infrastructure/schema'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ProviderConnect from '../components/ProviderConnect'
 
 export default function SettingsPage() {
+  const { language, t } = useTranslation()
+  const theme = usePreferencesStore((state) => state.theme)
+  const setTheme = usePreferencesStore((state) => state.setTheme)
+  const setLanguage = usePreferencesStore((state) => state.setLanguage)
   const settings = useAppStore((s) => s.settings)
   const updateClaudeConfig = useAppStore((s) => s.updateClaudeConfig)
   const updateOpenCodeConfig = useAppStore((s) => s.updateOpenCodeConfig)
@@ -37,7 +44,7 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url)
   }
 
-  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setImportError('')
@@ -48,12 +55,12 @@ export default function SettingsPage() {
         const parsed = JSON.parse(reader.result as string)
         const validated = validateState(parsed)
         if (!validated) {
-          setImportError('Invalid file format.')
+           setImportError(t('settings.invalidFile'))
           return
         }
         importData(validated)
       } catch {
-        setImportError('Could not parse file.')
+         setImportError(t('settings.parseFileError'))
       }
     }
     reader.readAsText(file)
@@ -67,7 +74,7 @@ export default function SettingsPage() {
 
   async function fetchUsageOrThrow() {
     const result = await fetchUsage()
-    if (!result.ok) throw new Error(result.errors.join(' | ') || 'Failed to fetch usage')
+     if (!result.ok) throw new Error(result.errors.join(' | ') || t('provider.refreshFailed'))
   }
 
   const hasElectron = typeof window !== 'undefined' && window.electronAPI
@@ -76,48 +83,53 @@ export default function SettingsPage() {
     .filter((config) => config?.enabled && config.sessionKey).length
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="page-stack">
+      <header className="document-header">
         <div>
-          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
-            <span className="h-px w-6 bg-cyan-300/60" />
-            Connections
-          </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.035em] text-white sm:text-4xl">Bring your providers together.</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-[15px]">
-            Connect browser sessions locally. Connection data stays on this device.
+          <div className="breadcrumb"><span>{t('app.workspace')}</span><span aria-hidden="true">/</span><strong>{t('settings.breadcrumb')}</strong></div>
+          <h1 className="page-title">{t('settings.title')}</h1>
+          <p className="page-description">
+            {t('settings.description')}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-          <span className={`h-2 w-2 rounded-full ${hasElectron ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.55)]' : 'bg-amber-400'}`} />
-          <div>
-            <p className="text-xs font-semibold text-slate-300">{connectedCount} of 4 active</p>
-            <p className="mt-0.5 text-[10px] text-slate-400">{hasElectron ? 'Desktop bridge ready' : 'Desktop bridge unavailable'}</p>
-          </div>
+        <div className="page-header-aside">
+          <p className="page-header-aside-label">{t('settings.workspaceStatus')}</p>
+          <p className="page-header-aside-value"><span className={`status-dot ${hasElectron ? 'status-dot-positive' : 'status-dot-warning'}`} /> {t('settings.activeOf', { connected: connectedCount })}</p>
+          <p className="page-header-aside-copy">{hasElectron ? t('settings.desktopReady') : t('settings.desktopUnavailable')}</p>
         </div>
-      </div>
+      </header>
 
       {!hasElectron && (
-        <div role="status" className="flex items-start gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-4 text-amber-200">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0">
+        <div role="status" className="notice notice-warning">
+          <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
             <path d="M12 8v5m0 3v.01M10.3 4.9 3.2 17.2A1.2 1.2 0 0 0 4.24 19h15.52a1.2 1.2 0 0 0 1.04-1.8L13.7 4.9a1.96 1.96 0 0 0-3.4 0Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
           <div>
-            <p className="text-xs font-semibold">Provider connections require the desktop app</p>
-            <p className="mt-1 text-[11px] text-amber-200/60">Run with <code className="rounded bg-amber-300/[0.08] px-1.5 py-0.5">npm run dev:electron</code> to enable account login.</p>
+            <strong>{t('settings.desktopRequiredTitle')}</strong>
+            <div>{t('settings.desktopRequiredCopy')}</div>
           </div>
         </div>
       )}
 
-      <section aria-labelledby="providers-heading" className="space-y-4">
+      <div className="settings-layout">
+         <aside className="settings-index" aria-label={t('settings.sections')}>
+           <p className="settings-index-label">{t('settings.onThisPage')}</p>
+           <a href="#providers">{t('settings.providers')}</a>
+           <a href="#preferences">{t('settings.preferences')}</a>
+           <a href="#local-data">{t('settings.localData')}</a>
+           <a href="#danger-zone">{t('settings.dangerZone')}</a>
+        </aside>
+
+        <div className="settings-sections">
+      <section id="providers" aria-labelledby="providers-heading" className="document-section">
         <div>
-          <h2 id="providers-heading" className="text-base font-semibold text-slate-100">AI providers</h2>
-          <p className="mt-1 text-xs text-slate-400">Each account opens in your browser and stores only its local session.</p>
+           <h2 id="providers-heading" className="section-title">{t('settings.aiProviders')}</h2>
+           <p className="section-copy mt-1">{t('settings.providersCopy')}</p>
         </div>
-        <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        <ProviderConnect
+        <div className="provider-list">
+          <ProviderConnect
           title="Claude.ai"
-          description="Track session, weekly, and model-specific usage windows from your Claude account."
+           description={t('settings.claudeDescription')}
           connected={!!claudeConfig?.sessionKey}
           enabled={!!claudeConfig?.enabled}
           onConnect={async (setLoading, setError, setSuccess) => {
@@ -125,15 +137,15 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.claudeLogin()
-              if (!result?.sessionKey) throw new Error('Login cancelled or failed')
+               if (!result?.sessionKey) throw new Error(t('provider.loginCancelled'))
               updateClaudeConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Login failed')
+               setError(e instanceof Error ? e.message : t('provider.loginFailed'))
             } finally {
               setLoading(false)
             }
@@ -153,16 +165,16 @@ export default function SettingsPage() {
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Failed to fetch usage')
+               setError(e instanceof Error ? e.message : t('provider.refreshFailed'))
             } finally {
               setLoading(false)
             }
           }}
-        />
+          />
 
-        <ProviderConnect
+          <ProviderConnect
           title="OpenCode Go"
-          description="Track rolling, weekly, and monthly usage windows from your OpenCode Go plan."
+           description={t('settings.opencodeDescription')}
           connected={!!opencodeConfig?.sessionKey}
           enabled={!!opencodeConfig?.enabled}
           onConnect={async (setLoading, setError, setSuccess) => {
@@ -170,15 +182,15 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.opencodeLogin()
-              if (!result?.sessionKey) throw new Error('Login cancelled or failed')
+               if (!result?.sessionKey) throw new Error(t('provider.loginCancelled'))
               updateOpenCodeConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Login failed')
+               setError(e instanceof Error ? e.message : t('provider.loginFailed'))
             } finally {
               setLoading(false)
             }
@@ -198,24 +210,24 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.opencodeLogin()
-              if (!result?.sessionKey) throw new Error('Could not refresh — try disconnecting and reconnecting')
+               if (!result?.sessionKey) throw new Error(t('provider.refreshUnavailable'))
               updateOpenCodeConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Failed to refresh')
+               setError(e instanceof Error ? e.message : t('provider.refreshFailed'))
             } finally {
               setLoading(false)
             }
           }}
-        />
+          />
 
-        <ProviderConnect
+          <ProviderConnect
           title="Codex"
-          description="Track Codex agentic usage, turns, and weekly reset timing from ChatGPT."
+           description={t('settings.codexDescription')}
           connected={!!codexConfig?.sessionKey}
           enabled={!!codexConfig?.enabled}
           onConnect={async (setLoading, setError, setSuccess) => {
@@ -223,15 +235,15 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.codexLogin()
-              if (!result?.sessionKey) throw new Error('Login cancelled or failed')
+               if (!result?.sessionKey) throw new Error(t('provider.loginCancelled'))
               updateCodexConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Login failed')
+               setError(e instanceof Error ? e.message : t('provider.loginFailed'))
             } finally {
               setLoading(false)
             }
@@ -251,24 +263,24 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.codexLogin()
-              if (!result?.sessionKey) throw new Error('Could not refresh — try disconnecting and reconnecting')
+               if (!result?.sessionKey) throw new Error(t('provider.refreshUnavailable'))
               updateCodexConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Failed to refresh')
+               setError(e instanceof Error ? e.message : t('provider.refreshFailed'))
             } finally {
               setLoading(false)
             }
           }}
-        />
+          />
 
-        <ProviderConnect
+          <ProviderConnect
           title="Gemini"
-          description="Track current-session and weekly Gemini usage windows with their reset times."
+           description={t('settings.geminiDescription')}
           connected={!!geminiConfig?.sessionKey}
           enabled={!!geminiConfig?.enabled}
           onConnect={async (setLoading, setError, setSuccess) => {
@@ -276,15 +288,15 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.geminiLogin()
-              if (!result?.sessionKey) throw new Error('Login cancelled or failed')
+               if (!result?.sessionKey) throw new Error(t('provider.loginCancelled'))
               updateGeminiConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Login failed')
+               setError(e instanceof Error ? e.message : t('provider.loginFailed'))
             } finally {
               setLoading(false)
             }
@@ -304,73 +316,107 @@ export default function SettingsPage() {
             setError(null)
             setSuccess(false)
             try {
-              if (!window.electronAPI) throw new Error('Electron API not available')
+               if (!window.electronAPI) throw new Error(t('settings.electronUnavailable'))
               const result = await window.electronAPI.geminiLogin()
-              if (!result?.sessionKey) throw new Error('Could not refresh — try disconnecting and reconnecting')
+               if (!result?.sessionKey) throw new Error(t('provider.refreshUnavailable'))
               updateGeminiConfig({ sessionKey: result.sessionKey, enabled: true })
               await new Promise((r) => setTimeout(r, 100))
               await fetchUsageOrThrow()
               setSuccess(true)
             } catch (e) {
-              setError(e instanceof Error ? e.message : 'Failed to refresh')
+               setError(e instanceof Error ? e.message : t('provider.refreshFailed'))
             } finally {
               setLoading(false)
             }
           }}
-        />
+          />
         </div>
       </section>
 
-      <section aria-labelledby="data-heading" className="space-y-4">
-        <div>
-          <h2 id="data-heading" className="text-base font-semibold text-slate-100">Local data</h2>
-          <p className="mt-1 text-xs text-slate-400">Move your connection settings or reset this installation.</p>
+       <section id="preferences" aria-labelledby="preferences-heading" className="document-section">
+         <div className="section-heading">
+           <div>
+             <h2 id="preferences-heading" className="section-title">{t('settings.preferencesTitle')}</h2>
+             <p className="section-copy">{t('settings.preferencesCopy')}</p>
+           </div>
+         </div>
+         <div className="settings-panel">
+           <div className="settings-panel-row">
+             <div>
+               <h3 className="settings-panel-title">{t('theme.label')}</h3>
+               <p className="settings-panel-copy">{t(theme === 'light' ? 'theme.light' : 'theme.dark')} · {t('theme.switchTo', { theme: t(theme === 'light' ? 'theme.dark' : 'theme.light') })}</p>
+             </div>
+             <div className="settings-panel-actions" role="group" aria-label={t('theme.label')}>
+               {(['light', 'dark'] as const).map((option) => (
+                 <button key={option} type="button" className={theme === option ? 'button-primary' : 'button-secondary'} aria-pressed={theme === option} onClick={() => setTheme(option)}>
+                   {t(option === 'light' ? 'theme.light' : 'theme.dark')}
+                 </button>
+               ))}
+             </div>
+           </div>
+           <div className="settings-panel-row">
+             <div>
+               <h3 className="settings-panel-title">{t('language.label')}</h3>
+               <p className="settings-panel-copy">{t('language.active', { language: languageName(language, language ?? 'en') })}</p>
+             </div>
+             <div className="settings-panel-actions" role="group" aria-label={t('language.label')}>
+               {(['en', 'es'] as UiLanguage[]).map((option) => {
+                 const label = languageName(language, option)
+                 return (
+                   <button key={option} type="button" className={language === option ? 'button-primary' : 'button-secondary'} aria-pressed={language === option} onClick={() => setLanguage(option)}>
+                     {label}
+                   </button>
+                 )
+               })}
+             </div>
+           </div>
+         </div>
+       </section>
+
+       <section id="local-data" aria-labelledby="data-heading" className="document-section">
+        <div className="section-heading">
+          <div>
+            <h2 id="data-heading" className="section-title">{t('settings.localData')}</h2>
+            <p className="section-copy">{t('settings.localDataCopy')}</p>
+          </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
-          <div className="flex flex-col gap-4 border-b border-white/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="settings-panel">
+          <div className="settings-panel-row">
             <div>
-              <h3 className="text-sm font-semibold text-slate-200">Backup and restore</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Export a JSON backup or restore data from another installation.</p>
+               <h3 className="settings-panel-title">{t('settings.backupRestore')}</h3>
+               <p className="settings-panel-copy">{t('settings.backupRestoreCopy')}</p>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                onClick={handleExport}
-                className="h-9 rounded-xl border border-white/[0.08] bg-white/[0.045] px-3.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08]"
-              >
-                Export data
-              </button>
-              <label className="flex h-9 cursor-pointer items-center rounded-xl border border-white/[0.08] bg-white/[0.045] px-3.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/[0.08] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-cyan-300">
-                Import data
+            <div className="settings-panel-actions">
+               <button type="button" onClick={handleExport} className="button-secondary">{t('settings.exportData')}</button>
+              <label className="button-secondary">
+                 {t('settings.importData')}
                 <input ref={fileRef} type="file" accept=".json" onChange={handleImportFile} className="sr-only" />
               </label>
             </div>
           </div>
-          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div id="danger-zone" className="settings-panel-row danger-section">
             <div>
-              <h3 className="text-sm font-semibold text-slate-200">Delete local data</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Remove all connections and settings from this device. This cannot be undone.</p>
+               <h3 className="settings-panel-title">{t('settings.dangerZone')}</h3>
+               <p className="settings-panel-copy"><strong>{t('settings.deleteLocalData')}</strong> {t('settings.deleteCopy')}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="h-9 shrink-0 self-start rounded-xl border border-rose-300/15 bg-rose-300/[0.055] px-3.5 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-300/[0.1] sm:self-auto"
-            >
-              Delete all data
-            </button>
+            <div className="settings-panel-actions">
+               <button type="button" onClick={() => setShowDeleteConfirm(true)} className="button-danger">{t('settings.deleteAll')}</button>
+            </div>
           </div>
         </div>
-        {importError && <p role="alert" className="text-xs text-rose-300">{importError}</p>}
+        {importError && <p role="alert" className="notice notice-error" style={{ marginTop: 12 }}>{importError}</p>}
       </section>
+        </div>
+      </div>
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="Delete All Data"
-        message="This will permanently remove all your connected accounts and settings. This cannot be undone."
-        confirmLabel="Delete Everything"
-        danger
-        requireType="delete all"
+         title={t('confirm.deleteTitle')}
+         message={t('confirm.deleteMessage')}
+         confirmLabel={t('confirm.deleteEverything')}
+         danger
+         requireType={t('confirm.deletePhrase')}
         onConfirm={handleDeleteAll}
         onCancel={() => setShowDeleteConfirm(false)}
       />

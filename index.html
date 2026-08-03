@@ -2,9 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fbfbfa" />
+    <meta name="description" content="IA Hub usage intelligence for local AI provider sessions." />
     <title>IA Hub</title>
+    <script>
+      (() => {
+        try {
+          const preferences = JSON.parse(localStorage.getItem('ia-hub:preferences:v1') || '{}')
+          document.documentElement.dataset.theme = preferences.theme === 'dark' ? 'dark' : 'light'
+          document.documentElement.lang = preferences.language === 'es' ? 'es' : 'en'
+        } catch {
+          document.documentElement.dataset.theme = 'light'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

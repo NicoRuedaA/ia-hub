@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 import { useAppStore, type Page } from './state/store'
+import { usePreferencesStore } from './state/preferencesStore'
+import { useTranslation } from './i18n'
 import DashboardPage from './ui/pages/DashboardPage'
 import SettingsPage from './ui/pages/SettingsPage'
+import LanguagePicker from './ui/components/LanguagePicker'
 
 interface NavItem {
   id: Page
@@ -9,84 +12,135 @@ interface NavItem {
   icon: ReactNode
 }
 
-const navItems: NavItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Overview',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
-        <path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    id: 'settings',
-    label: 'Connections',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
-        <path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" strokeWidth="1.7" />
-        <path d="m19.25 13.2 1.3 1.02-1.75 3.03-1.55-.62a7.95 7.95 0 0 1-2.08 1.2L14.93 19.5h-3.5l-.25-1.67a7.95 7.95 0 0 1-2.08-1.2l-1.54.62-1.75-3.03L7.1 13.2a8.13 8.13 0 0 1 0-2.4L5.8 9.78l1.75-3.03 1.55.62a7.95 7.95 0 0 1 2.08-1.2l.25-1.67h3.5l.24 1.67a7.95 7.95 0 0 1 2.08 1.2l1.55-.62 1.75 3.03-1.3 1.02a8.13 8.13 0 0 1 0 2.4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-]
+function Navigation({ mobile = false }: { mobile?: boolean }) {
+  const currentPage = useAppStore((s) => s.currentPage)
+  const setPage = useAppStore((s) => s.setPage)
+  const { t } = useTranslation()
+
+  const navItems: NavItem[] = [
+    {
+      id: 'dashboard',
+      label: t('nav.dashboard'),
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16">
+          <path d="M4 5.5h6v6H4v-6Zm10 0h6v6h-6v-6ZM4 15.5h6v3H4v-3Zm10 0h6v3h-6v-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: 'settings',
+      label: t('nav.settings'),
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="16" height="16">
+          <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.6" />
+          <path d="m19.2 13.1 1.2 1-1.6 2.8-1.5-.6c-.6.5-1.3.9-2.1 1.2l-.2 1.5h-3.3l-.2-1.5a8 8 0 0 1-2.1-1.2l-1.5.6-1.6-2.8 1.2-1a7.3 7.3 0 0 1 0-2.2l-1.2-1 1.6-2.8 1.5.6c.6-.5 1.3-.9 2.1-1.2l.2-1.5H15l.2 1.5c.8.3 1.5.7 2.1 1.2l1.5-.6 1.6 2.8-1.2 1a7.3 7.3 0 0 1 0 2.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <nav aria-label={t('app.primaryNavigation')} className={mobile ? 'mobile-nav' : 'workspace-nav'}>
+      {navItems.map((item) => {
+        const active = currentPage === item.id
+        return (
+          <button
+            type="button"
+            key={item.id}
+            onClick={() => setPage(item.id)}
+            aria-current={active ? 'page' : undefined}
+            className={`${mobile ? 'mobile-nav-item' : 'nav-item'} ${active ? 'is-active' : ''}`}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+function Brand({ mobile = false }: { mobile?: boolean }) {
+  const { t } = useTranslation()
+
+  return (
+    <span className={mobile ? 'mobile-brand' : 'brand-content'}>
+      <span className="brand-mark" aria-hidden="true">IA</span>
+      <span>
+        <span className="brand-name">IA Hub</span>
+        <span className="brand-caption">{t('app.brandCaption')}</span>
+      </span>
+    </span>
+  )
+}
+
+function ThemeToggle({ mobile = false }: { mobile?: boolean }) {
+  const theme = usePreferencesStore((state) => state.theme)
+  const setTheme = usePreferencesStore((state) => state.setTheme)
+  const { t } = useTranslation()
+  const nextTheme = theme === 'light' ? 'dark' : 'light'
+  const currentLabel = t(theme === 'light' ? 'theme.light' : 'theme.dark')
+  const nextLabel = t(nextTheme === 'light' ? 'theme.light' : 'theme.dark')
+
+  return (
+    <button
+      type="button"
+      className={`theme-toggle ${mobile ? 'theme-toggle-mobile' : ''}`}
+      aria-label={t('theme.switchTo', { theme: nextLabel })}
+      aria-pressed={theme === 'dark'}
+      onClick={() => setTheme(nextTheme)}
+    >
+      <span>{t('theme.label')}</span>
+      <strong>{currentLabel}</strong>
+      <span className="theme-toggle-next">{nextLabel}</span>
+    </button>
+  )
+}
 
 export default function App() {
   const currentPage = useAppStore((s) => s.currentPage)
-  const setPage = useAppStore((s) => s.setPage)
+  const { t } = useTranslation()
+  const language = usePreferencesStore((state) => state.language)
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#07090d] text-slate-100">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_20%_0%,rgba(34,211,238,0.09),transparent_40%),radial-gradient(circle_at_82%_0%,rgba(139,92,246,0.08),transparent_38%)]" />
+    <>
+      <div className="app-shell">
+      <div className="mobile-topbar">
+        <Brand mobile />
+        <Navigation mobile />
+        <ThemeToggle mobile />
+      </div>
 
-      <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#090b10]/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => setPage('dashboard')}
-            className="group flex items-center gap-3 rounded-lg text-left"
-            aria-label="Go to overview"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/15 to-violet-400/10 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-[19px] w-[19px] text-cyan-200">
-                <path d="M5 17.5 9 6l3 8 2.5-6L19 17.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M4 20h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span>
-              <span className="block text-sm font-semibold tracking-[-0.01em] text-white">IA Hub</span>
-              <span className="hidden text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400 sm:block">Usage intelligence</span>
-            </span>
+        <div className="workspace-layout">
+        <aside className="workspace-sidebar" aria-label={t('app.workspaceSidebar')}>
+          <button type="button" onClick={() => useAppStore.getState().setPage('dashboard')} className="brand-lockup" aria-label={t('app.goDashboard')}>
+            <Brand />
           </button>
 
-          <nav aria-label="Primary navigation" className="flex items-center rounded-xl border border-white/[0.06] bg-white/[0.025] p-1">
-            {navItems.map((item) => {
-              const active = currentPage === item.id
-              return (
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={() => setPage(item.id)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors sm:px-4 ${
-                    active
-                      ? 'bg-white/[0.09] text-white shadow-sm'
-                      : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </nav>
-        </div>
-      </header>
+          <p className="sidebar-label">{t('app.workspace')}</p>
+          <Navigation />
 
-      <main className="relative mx-auto max-w-[1240px] px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-        {currentPage === 'dashboard' && <DashboardPage />}
-        {currentPage === 'settings' && <SettingsPage />}
-      </main>
-    </div>
+          <div className="sidebar-context">
+            <p className="sidebar-label" style={{ margin: 0 }}>{t('app.context')}</p>
+            <p className="context-name">{t('app.providerUsage')}</p>
+            <p className="context-copy">{t('app.contextCopy')}</p>
+          </div>
+
+          <ThemeToggle />
+          <div className="sidebar-footer">
+            <strong>{t('app.localFirst')}</strong><br />{t('app.localDataStays')}
+          </div>
+        </aside>
+
+        <main className="workspace-main">
+          <div className="workspace-content">
+            {currentPage === 'dashboard' && <DashboardPage />}
+            {currentPage === 'settings' && <SettingsPage />}
+          </div>
+        </main>
+        </div>
+      </div>
+      <LanguagePicker open={language === null} />
+    </>
   )
 }

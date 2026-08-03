@@ -4,10 +4,11 @@ import { defaultState, validateState } from './schema'
 const STORAGE_KEY = 'ia-hub:v1'
 const BACKUP_KEY = 'ia-hub:backup-corrupt'
 
-export function createLocalStorageRepository(storage: Storage): Repository {
+export function createLocalStorageRepository(storage?: Storage): Repository {
   return {
     load(): PersistedState {
       try {
+        if (!storage) return defaultState()
         const raw = storage.getItem(STORAGE_KEY)
         if (!raw) return defaultState()
 
@@ -30,7 +31,7 @@ export function createLocalStorageRepository(storage: Storage): Repository {
     },
 
     save(state: PersistedState): void {
-      storage.setItem(STORAGE_KEY, JSON.stringify(state))
+      storage?.setItem(STORAGE_KEY, JSON.stringify(state))
     },
   }
 }
