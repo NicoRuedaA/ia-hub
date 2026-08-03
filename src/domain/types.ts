@@ -2,6 +2,25 @@ export interface Settings {
   apiConfig?: APIConfig
 }
 
+export type UiLanguage = 'en' | 'es'
+export type Language = UiLanguage | null
+export type Theme = 'light' | 'dark'
+
+export type UsageLabelKey =
+  | 'session'
+  | 'weeklyAllModels'
+  | 'weeklyOpus'
+  | 'model'
+  | 'rolling'
+  | 'weekly'
+  | 'monthly'
+  | 'weeklyUsage'
+
+export interface UsageLabelParams {
+  model?: string
+  turns?: number
+}
+
 // ── API Usage Tracking ─────────────────────────────────────────
 
 export type Provider = 'anthropic' | 'opencode' | 'codex' | 'gemini'
@@ -36,6 +55,8 @@ export interface GeminiAPIConfig {
 export interface UsageLimit {
   id: string
   name: string
+  usageLabelKey?: UsageLabelKey
+  usageLabelParams?: UsageLabelParams
   provider: Provider
   used: number
   limit: number

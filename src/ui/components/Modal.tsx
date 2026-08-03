@@ -1,11 +1,14 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from '../../i18n'
 
 interface ModalProps {
   open: boolean
   onClose: () => void
   children: ReactNode
   ariaLabel?: string
+  closeOnEscape?: boolean
+  closeOnOverlayClick?: boolean
 }
 
 const focusableSelector = [
@@ -22,7 +25,15 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
     .filter((element) => element.getAttribute('aria-hidden') !== 'true')
 }
 
-export default function Modal({ open, onClose, children, ariaLabel = 'Dialog' }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  children,
+  ariaLabel,
+  closeOnEscape = true,
+  closeOnOverlayClick = true,
+}: ModalProps) {
+  const { t } = useTranslation()
   const overlayRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
@@ -58,7 +69,7 @@ export default function Modal({ open, onClose, children, ariaLabel = 'Dialog' }:
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && closeOnEscape) {
         event.preventDefault()
         onCloseRef.current()
         return
@@ -96,25 +107,25 @@ export default function Modal({ open, onClose, children, ariaLabel = 'Dialog' }:
       })
       previouslyFocused?.focus()
     }
-  }, [open])
+  }, [closeOnEscape, open])
 
   if (!open) return null
 
   return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#030407]/80 px-4 backdrop-blur-sm"
+      className="modal-overlay"
       onMouseDown={(event) => {
-        if (event.target === overlayRef.current) onCloseRef.current()
+        if (closeOnOverlayClick && event.target === overlayRef.current) onCloseRef.current()
       }}
     >
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabel}
+        aria-label={ariaLabel ?? t('modal.dialog')}
         tabIndex={-1}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.09] bg-[#0d1017] shadow-[0_28px_90px_rgba(0,0,0,0.55)] outline-none"
+        className="modal-dialog"
       >
         {children}
       </div>

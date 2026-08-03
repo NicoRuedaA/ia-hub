@@ -3,7 +3,7 @@ import type { Settings, UsageLimit, AnthropicUsageResponse, ClaudeAPIConfig, Ope
 import type { PersistedState } from '../infrastructure/repository'
 import { createLocalStorageRepository } from '../infrastructure/localStorageRepository'
 
-const repo = createLocalStorageRepository(localStorage)
+const repo = createLocalStorageRepository(typeof globalThis.localStorage !== 'undefined' ? globalThis.localStorage : undefined)
 
 export type Page = 'dashboard' | 'settings'
 
@@ -60,7 +60,8 @@ function parseClaudeUsage(usage: AnthropicUsageResponse): UsageLimit[] {
     const fh = usage.five_hour
     limits.push({
       id: 'claude-five-hour',
-      name: 'Claude · Session (5h)',
+      name: 'session',
+      usageLabelKey: 'session',
       provider: 'anthropic',
       used: Number(fh.utilization ?? 0),
       limit: 100,
@@ -73,7 +74,8 @@ function parseClaudeUsage(usage: AnthropicUsageResponse): UsageLimit[] {
     const sd = usage.seven_day
     limits.push({
       id: 'claude-seven-day',
-      name: 'Claude · Weekly (All Models)',
+      name: 'weekly-all-models',
+      usageLabelKey: 'weeklyAllModels',
       provider: 'anthropic',
       used: Number(sd.utilization ?? 0),
       limit: 100,
@@ -86,7 +88,8 @@ function parseClaudeUsage(usage: AnthropicUsageResponse): UsageLimit[] {
     const sd = usage.seven_day_opus
     limits.push({
       id: 'claude-seven-day-opus',
-      name: 'Claude · Weekly (Opus)',
+      name: 'weekly-opus',
+      usageLabelKey: 'weeklyOpus',
       provider: 'anthropic',
       used: Number(sd.utilization ?? 0),
       limit: 100,
@@ -103,12 +106,12 @@ function parseClaudeUsage(usage: AnthropicUsageResponse): UsageLimit[] {
       const percent = Number(limit.percent ?? 0)
       const resetAt = limit.resets_at ?? null
       const id = `claude-${modelName.toLowerCase().replace(/\s+/g, '-')}`
-      const name = `Claude · ${modelName}`
+      const name = modelName
 
-      const existing = limits.findIndex((l) => l.name.toLowerCase() === name.toLowerCase())
+      const existing = limits.findIndex((l) => l.id === id)
       if (existing >= 0) limits.splice(existing, 1)
 
-      limits.push({ id, name, provider: 'anthropic', used: percent, limit: 100, unit: 'percent', resetsAt: resetAt })
+      limits.push({ id, name, usageLabelKey: 'model', usageLabelParams: { model: modelName }, provider: 'anthropic', used: percent, limit: 100, unit: 'percent', resetsAt: resetAt })
     }
   }
 
@@ -188,7 +191,9 @@ function parseCodexUsage(results: Array<{ url: string; status: number; data: unk
 
       limits.push({
         id: `codex-weekly`,
-        name: typeof turns === 'number' ? `Codex · Weekly Usage · ${turns} turns` : 'Codex · Weekly Usage',
+        name: 'weekly-usage',
+        usageLabelKey: 'weeklyUsage',
+        usageLabelParams: typeof turns === 'number' ? { turns } : undefined,
         provider: 'codex' as const,
         used,
         limit: 100,
@@ -229,20 +234,25 @@ function parseOpenCodeUsage(results: Array<{ url: string; status: number; data: 
 
       let id = 'opencode-unknown'
       let name = label
+      let usageLabelKey: UsageLimit['usageLabelKey']
       if (/rolling|session|5h|5 hour/i.test(label)) {
         id = 'opencode-five-hour'
-        name = 'OpenCode Go · Rolling (5h)'
+         name = 'rolling'
+         usageLabelKey = 'rolling'
       } else if (/weekly|week|7d/i.test(label)) {
         id = 'opencode-seven-day'
-        name = 'OpenCode Go · Weekly'
+        name = 'weekly'
+        usageLabelKey = 'weekly'
       } else if (/monthly|month|30d/i.test(label)) {
         id = 'opencode-monthly'
-        name = 'OpenCode Go · Monthly'
+        name = 'monthly'
+        usageLabelKey = 'monthly'
       }
 
       return {
         id,
         name,
+        usageLabelKey,
         provider: 'opencode' as const,
         used: pct,
         limit: 100,
